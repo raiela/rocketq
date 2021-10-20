@@ -4,23 +4,49 @@ module.exports = {
     async create(req, res){
         const db = await Database()
         const pass = req.body.password
-        let roomID 
+        let roomId 
+        let isRoom = true
 
-        for (var i = 0;  i< 6; i++){
-            i == 0 ?  roomID = Math.floor(Math.random() * 10).toString() : roomID += Math.floor(Math.random() * 10).toString()            
-        }
 
-        await db.run(`INSERT INTO rooms (
-            id,
-            pass
+        while(isRoom){
+            for (var i = 0;  i< 6; i++){
+                i == 0 ?  roomId = Math.floor(Math.random() * 10).toString() : roomId += Math.floor(Math.random() * 10).toString()            
+            }
+            
+            const roomExistIds = await db.all(`SELECT id FROM rooms`)
 
-        ) VALUES (
-            ${parseInt(roomID)},
-            ${pass}
-        )`)
+            isRoom = roomExistIds.some(roomExistIds => roomExistIds === roomId)
+            
+            if (! isRoom){
+                await db.run(`INSERT INTO rooms (
+                    id,
+                    pass
+        
+                ) VALUES (
+                    ${parseInt(roomId)},
+                    ${pass}
+                )`)
+            }    
+
+        }         
     
         await db.close(``)
 
-        res.redirect(`/room/${roomID}`)
+        res.redirect(`/room/${roomId}`)
+    },
+
+    async open(req, res){
+        const db = await Database()
+        const roomId = req.params.room 
+        const questionsRead = await(db.all(`SELECT * FROM questions WHERE room = ${roomId} AND read = 1`))
+        const questions = await db.all(`SELECT * FROM questions WHERE room = ${roomId} AND read = 0`)
+
+        res.render("room", {roomId: roomId, questions: questions, questionsRead: questionsRead})
+    },
+
+    enter(req, res){
+        const roomId = req.body.roomId
+
+        res.redirect(`/room/${roomId}`)
     }
 }
